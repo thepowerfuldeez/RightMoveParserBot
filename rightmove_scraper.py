@@ -176,17 +176,18 @@ class RightmoveData:
         titles = tree.xpath(xp_titles)
         addresses = tree.xpath(xp_addresses)
         descriptions = tree.xpath(xp_descriptions)
-        base = "http://www.rightmove.co.uk"
 
-        tree_weblinks = tree.xpath(xp_weblinks)
-        weblinks = [f"{base}{tree_weblinks[i]}" for i in range(len(tree_weblinks))]
-        tree_agent_urls = tree.xpath(xp_agent_urls)
-        agent_urls = [f"{base}{tree_agent_urls[k]}" for k in range(len(tree_agent_urls))]
+        base = "http://www.rightmove.co.uk"
+        weblinks = [f"{base}{rel_link}" for rel_link in tree.xpath(xp_weblinks)]
+        agent_urls = [f"{base}{rel_link}" for rel_link in tree.xpath(xp_agent_urls)]
+
+        # assert len(weblinks) == len(agent_urls) == len(price_pcm) == len(titles) == len(addresses) == len(descriptions)
 
         # Optionally get floorplan links from property urls (longer runtime):
         floorplan_urls = list() if get_floorplans else np.nan
+        full_descriptions = [np.nan for _ in range(len(weblinks))]
         if get_floorplans:
-            for weblink in weblinks:
+            for i, weblink in enumerate(weblinks):
                 if weblink in self._seen_links:
                     floorplan_urls.append(np.nan)
                     continue
@@ -197,6 +198,13 @@ class RightmoveData:
                 tree = html.fromstring(content)
 
                 xp_floorplan_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[1]/div[1]/div/a/img/@src"""
+                xp_full_description = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[3]/div/div/text()"""
+
+                full_description_s = tree.xpath(xp_full_description)
+                if not len(full_description_s):
+                    continue
+                full_description = full_description_s[0].strip()
+                full_descriptions[i] = full_description
 
                 floorplan_url = tree.xpath(xp_floorplan_url)
                 if floorplan_url:
@@ -208,12 +216,12 @@ class RightmoveData:
                     floorplan_urls.append(np.nan)
 
         # Store the data in a Pandas DataFrame:
-        data = [price_pcm, titles, addresses, descriptions, weblinks, agent_urls]
+        data = [price_pcm, titles, addresses, descriptions, weblinks, full_descriptions]
         data = data + [floorplan_urls] if get_floorplans else data
 
         temp_df = pd.DataFrame(data)
         temp_df = temp_df.transpose()
-        columns = ["price", "type", "address", "description", "url", "agent_url"]
+        columns = ["price", "type", "address", "description", "url", "full_description"]
         columns = columns + ["floorplan_url"] if get_floorplans else columns
         temp_df.columns = columns
 
