@@ -57,7 +57,7 @@ def zoopla_job(context: telegram.ext.CallbackContext):
 
             check_and_send_message(
                 context.bot, link, item['address'],
-                postcode, item['num_bedrooms'], item['price'], item['description'], item['floorplan_url'])
+                postcode, item['number_bedrooms'], item['price'], item['description'], item['floorplan_url'])
 
     logger.info("End parsing zoopla")
 
