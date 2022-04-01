@@ -25,7 +25,7 @@ def send_message(bot, img_url, caption):
 def check_and_send_message(bot, link,
                            address, postcode, number_bedrooms, price, description, floorplan_url):
     k = f"{postcode}_{number_bedrooms}"
-    description_hash = hashlib.sha256(description.encode('utf-8')).hexdigest()[:8]
+    description_hash = hashlib.sha256(description.strip().lower().encode('utf-8')).hexdigest()[:8]
     if (
             k in minprices_by_area_num_bedrooms
             and price <= minprices_by_area_num_bedrooms[k]
