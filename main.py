@@ -1,5 +1,6 @@
 import logging
 import hashlib
+import random
 from pathlib import Path
 
 import pandas as pd
@@ -25,7 +26,11 @@ def send_message(bot, img_url, caption):
 def check_and_send_message(bot, link,
                            address, postcode, number_bedrooms, price, description, floorplan_url):
     k = f"{postcode}_{number_bedrooms}"
-    description_hash = hashlib.sha256(description.strip().lower().encode('utf-8')).hexdigest()[:8]
+    if not isinstance(description, str):
+        description_str = description.strip().lower()
+    else:
+        description_str = str(random.random())
+    description_hash = hashlib.sha256(description_str.encode('utf-8')).hexdigest()[:8]
     if (
             k in minprices_by_area_num_bedrooms
             and price <= minprices_by_area_num_bedrooms[k]
@@ -83,7 +88,10 @@ def rightmove_job(context: telegram.ext.CallbackContext):
             check_and_send_message(
                 context.bot, link, item.address,
                 postcode, item.number_bedrooms, item.price,
-                item.full_description if len(item.full_description) > len(item.description) else item.description,
+                item.full_description if (
+                        isinstance(item.full_description, str) and isinstance(item.description,str)
+                        and len(item.full_description) > len(item.description)
+                ) else item.description,
                 item.floorplan_url)
 
     logger.info("End parsing rightmove")
