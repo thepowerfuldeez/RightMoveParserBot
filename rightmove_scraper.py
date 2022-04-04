@@ -238,7 +238,7 @@ class RightmoveData:
         for p in range(1, self.page_count + 1, 1):
 
             # Create the URL of the specific results page:
-            p_url = f"{str(self.url)}&index={p * 24}"
+            p_url = f"{self.url}&index={p * 24}"
 
             # Make the request:
             status_code, content = self._request(p_url)

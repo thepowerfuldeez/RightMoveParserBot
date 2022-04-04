@@ -82,7 +82,7 @@ def rightmove_job(context: telegram.ext.CallbackContext):
 
             check_and_send_message(
                 context.bot, link, item.address,
-                postcode, item.num_bedrooms, item.price,
+                postcode, item.number_bedrooms, item.price,
                 item.full_description if len(item.full_description) > len(item.description) else item.description,
                 item.floorplan_url)
 
