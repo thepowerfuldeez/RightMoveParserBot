@@ -19,10 +19,10 @@ class DB:
             hash_save_path = Path(hash_save_path)
         self.hash_save_path = hash_save_path
 
-        seen_description_hashes = dict()
+        seen_hashes = dict()
         if hash_save_path.exists():
-            seen_description_hashes = orjson.loads(hash_save_path.read_bytes())
-        self.seen_description_hashes = seen_description_hashes
+            seen_hashes = orjson.loads(hash_save_path.read_bytes())
+        self.seen_hashes = seen_hashes
 
     def update(self, link):
         if link not in self.seen_links:
@@ -30,12 +30,12 @@ class DB:
             self.save_path.write_bytes(orjson.dumps(self.seen_links))
 
     def update_hash(self, hash_):
-        if hash_ not in self.seen_description_hashes:
-            self.seen_description_hashes[hash_] = 1
-            self.hash_save_path.write_bytes(orjson.dumps(self.seen_description_hashes))
+        if hash_ not in self.seen_hashes:
+            self.seen_hashes[hash_] = 1
+            self.hash_save_path.write_bytes(orjson.dumps(self.seen_hashes))
 
     def contains_hash(self, hash_):
-        return hash_ in self.seen_description_hashes
+        return hash_ in self.seen_hashes
 
     def __contains__(self, link):
         return link in self.seen_links
