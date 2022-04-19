@@ -9,14 +9,14 @@ import telegram.ext
 from telegram.ext import Updater, CommandHandler
 
 from parsing import get_rightmove_feed, get_zoopla_feed
-from utils import fill_postcode_from_address, get_hash_from_image_url
+from utils import fill_postcode_from_address, get_hash_from_image_url, get_hash_from_description
 from db import DB
 from config import TG_TOKEN
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-db = DB("seen_links.json", "seen_hashes.json")
+db = DB("seen_links.json", "seen_hashes.json", "seen_description_hashes.json")
 minprices_by_area_num_bedrooms = orjson.loads(Path("minprices_by_area_num_bedrooms.json").read_bytes())
 
 
@@ -26,7 +26,6 @@ def send_message(bot, img_url, caption):
 
 def check_and_send_message(bot, link, address, postcode, number_bedrooms, price, floorplan_url):
     k = f"{postcode}_{number_bedrooms}"
-    # description_hash = hashlib.sha256(description_str.encode('utf-8')).hexdigest()[:8]
     if (
             k in minprices_by_area_num_bedrooms
             and price <= minprices_by_area_num_bedrooms[k]
@@ -43,15 +42,26 @@ def zoopla_job(context: telegram.ext.CallbackContext):
         if link not in db:
             db.update(link)
 
+            description_hash = get_hash_from_description(item['description'])
+            if not db.contains_description_hash(description_hash):
+                db.update_description_hash(description_hash)
+            else:
+                logger.info(f"Skipping {link} cause of duplicate description")
+                continue
+
             if not pd.isnull(item['floorplan_url']):
                 image_hash = get_hash_from_image_url(item['floorplan_url'])
                 if not db.contains_hash(image_hash):
                     db.update_hash(image_hash)
+                else:
+                    logger.info(f"Skipping {link} cause of duplicate image")
+                    continue
             else:
                 continue
 
             postcode = fill_postcode_from_address(item['postcode'], item['address'])
             if postcode is None:
+                logger.info(f"Skipping {link} cause of invalid postcode")
                 continue
 
             check_and_send_message(
@@ -70,15 +80,30 @@ def rightmove_job(context: telegram.ext.CallbackContext):
         if link not in db:
             db.update(link)
 
+            description = item.full_description if (
+                    isinstance(item.full_description, str) and isinstance(item.description, str)
+                    and len(item.full_description) > len(item.description)
+            ) else item.description
+            description_hash = get_hash_from_description(description)
+            if not db.contains_description_hash(description_hash):
+                db.update_description_hash(description_hash)
+            else:
+                logger.info(f"Skipping {link} cause of duplicate description")
+                continue
+
             if not pd.isnull(item.floorplan_url):
                 image_hash = get_hash_from_image_url(item.floorplan_url)
                 if not db.contains_hash(image_hash):
                     db.update_hash(image_hash)
+                else:
+                    logger.info(f"Skipping {link} cause of duplicate image")
+                    continue
             else:
                 continue
 
             postcode = fill_postcode_from_address(item.postcode, item.address)
             if postcode is None:
+                logger.info(f"Skipping {link} cause of invalid postcode")
                 continue
 
             check_and_send_message(

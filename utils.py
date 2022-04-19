@@ -1,3 +1,6 @@
+import random
+import hashlib
+
 import pandas as pd
 import requests
 from PIL import Image
@@ -31,6 +34,15 @@ def fill_postcode_from_address(postcode, address):
             logger.info("Postcode is not filled")
             return
     return postcode
+
+
+def get_hash_from_description(description):
+    if not isinstance(description, str):
+        description_str = description.strip().lower()
+    else:
+        description_str = str(random.random())
+    description_hash = hashlib.sha256(description_str.encode('utf-8')).hexdigest()[:8]
+    return description_hash
 
 
 def get_hash_from_image_url(image_url):
