@@ -34,5 +34,10 @@ def fill_postcode_from_address(postcode, address):
 
 
 def get_hash_from_image_url(image_url):
-    image = Image.open(requests.get(image_url, stream=True).raw)
-    return str(phash(image))[:8]
+    try:
+        image = Image.open(requests.get(image_url, stream=True).raw)
+        return str(phash(image))[:8]
+    except Exception as e:
+        print("using random hash")
+        # if not image – return random hash
+        return str(hash(image_url))[:8]
