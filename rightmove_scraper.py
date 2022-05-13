@@ -199,7 +199,7 @@ class RightmoveData:
                 tree = html.fromstring(content)
 
                 xp_floorplan_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[1]/div[1]/div/a/img/@src"""
-                xp_epc_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[4]/a@href"""
+                xp_epc_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[4]/a/@href"""
                 xp_full_description = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[3]/div/div/text()"""
 
                 full_description_s = tree.xpath(xp_full_description)
