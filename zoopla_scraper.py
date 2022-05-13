@@ -8,7 +8,7 @@ from lxml import html
 def get_apartments(url, multi_pages=False):
     page_tree = get_one_page(url)
     total_links = get_apartments_links(page_tree)
-    
+
     if multi_pages:
         num_pages_total_xpath = """//*[@id="__next"]/div[3]/div[2]/main/div[2]/div[3]/ul/li[6]/a/text()"""
         num_pages_total = int(page_tree.xpath(num_pages_total_xpath)[0])
@@ -29,7 +29,6 @@ def get_apartments_links(page_tree):
             page_tree.xpath("""//*[starts-with(@id, "listing_")]/div/div[2]/div[2]/a[2]/@href""")]
 
 
-
 def parse_weblink(weblink, only_with_floorplan=True):
     text = requests.get(weblink).content
     tree = html.fromstring(text)
@@ -44,7 +43,8 @@ def parse_weblink(weblink, only_with_floorplan=True):
         postcode = postcode_search[0]
     else:
         postcode = None
-    
+
+    epc_url, img_url = None, None
     if details['adTargeting']['hasFloorplan']:
         if details['floorPlan']['pdf']:
             img_url = details['floorPlan']['pdf'][0]['original']
@@ -52,20 +52,29 @@ def parse_weblink(weblink, only_with_floorplan=True):
             img_url = f"https://lc.zoocdn.com/{details['floorPlan']['image'][0]['filename']}"
         elif details['floorPlan']['links']:
             img_url = details['floorPlan']['links'][0]
+
+    if details['adTargeting']['hasEpc']:
+        if details['epc']['pdf']:
+            epc_url = details['epc']['pdf'][0]['original']
+        elif details['epc']['image']:
+            epc_url = f"https://lc.zoocdn.com/{details['epc']['image'][0]['filename']}"
+        elif details['epc']['links']:
+            epc_url = details['epc']['links'][0]
     else:
-        img_url = None
-        
+        epc_url = None
+
     num_bedrooms = details['counts']['numBedrooms']
     price = details['pricing']['label'].split()[0]
     if price.startswith("£"):
         price = price[1:]
         price = int(price.replace(",", ""))
-    
+
     if (only_with_floorplan and img_url) or not only_with_floorplan:
         return {"url": weblink,
                 "description": description,
                 "address": address,
                 "postcode": postcode,
                 "floorplan_url": img_url,
+                "epc_url": epc_url,
                 "number_bedrooms": num_bedrooms,
                 "price": price}

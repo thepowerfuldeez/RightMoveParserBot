@@ -1,6 +1,4 @@
 import logging
-import hashlib
-import random
 from pathlib import Path
 
 import pandas as pd
@@ -9,9 +7,10 @@ import telegram.ext
 from telegram.ext import Updater, CommandHandler
 
 from parsing import get_rightmove_feed, get_zoopla_feed
-from utils import fill_postcode_from_address, get_hash_from_image_url, get_hash_from_description
+from area_lib import detect_area
+from utils import get_hash_from_image_url, get_hash_from_description
 from db import DB
-from config import TG_TOKEN
+from config import TG_TOKEN, TG_CHAT_ID
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -20,18 +19,16 @@ db = DB("seen_links.json", "seen_hashes.json", "seen_description_hashes.json")
 minprices_by_area_num_bedrooms = orjson.loads(Path("minprices_by_area_num_bedrooms.json").read_bytes())
 
 
-def send_message(bot, img_url, caption):
-    bot.send_photo(chat_id="@instantflats", photo=img_url, caption=caption)
+def send_message(bot, img_url, epc_url, caption):
+    bot.send_media_group(chat_id=TG_CHAT_ID, media=[
+        telegram.InputMediaPhoto(img_url, caption=caption),
+        telegram.InputMediaPhoto(epc_url),
+    ])
 
 
-def check_and_send_message(bot, link, address, postcode, number_bedrooms, price, floorplan_url):
-    k = f"{postcode}_{number_bedrooms}"
-    if (
-            k in minprices_by_area_num_bedrooms
-            and price <= minprices_by_area_num_bedrooms[k]
-    ):
-        send_message(bot, floorplan_url,
-                     f"{link}\n\nPrice: {price}\nNum bedrooms: {number_bedrooms}\n{address}")
+def check_and_send_message(bot, link, address, area, number_bedrooms, price, floorplan_url, epc_url):
+    send_message(bot, floorplan_url, epc_url,
+                 f"{link}\n\nPrice: {price}\nArea: {area}\nNum bedrooms: {number_bedrooms}\n{address}")
 
 
 def zoopla_job(context: telegram.ext.CallbackContext):
@@ -59,14 +56,22 @@ def zoopla_job(context: telegram.ext.CallbackContext):
             else:
                 continue
 
-            postcode = fill_postcode_from_address(item['postcode'], item['address'])
-            if postcode is None:
-                logger.info(f"Skipping {link} cause of invalid postcode")
+            if pd.isnull(item['epc_url']):
                 continue
+
+            total_area = detect_area(item['floorplan_url'])
+            if total_area < 50 and total_area != 0:
+                logger.info(f"Skipping {link} cause of small area")
+                continue
+            else:
+                if total_area >= 50:
+                    total_area_s = f"{total_area} sq.m"
+                else:
+                    total_area_s = "unknown"
 
             check_and_send_message(
                 context.bot, link, item['address'],
-                postcode, item['number_bedrooms'], item['price'], item['floorplan_url']
+                total_area_s, item['number_bedrooms'], item['price'], item['floorplan_url'], item['epc_url']
             )
 
     logger.info("End parsing zoopla")
@@ -101,15 +106,24 @@ def rightmove_job(context: telegram.ext.CallbackContext):
             else:
                 continue
 
-            postcode = fill_postcode_from_address(item.postcode, item.address)
-            if postcode is None:
-                logger.info(f"Skipping {link} cause of invalid postcode")
+            if pd.isnull(item.epc_url):
                 continue
+
+            total_area = detect_area(item.floorplan_url)
+            if total_area < 50 and total_area != 0:
+                logger.info(f"Skipping {link} cause of small area")
+                continue
+            else:
+                if total_area >= 50:
+                    total_area_s = f"{total_area} sq.m"
+                else:
+                    total_area_s = "unknown"
 
             check_and_send_message(
                 context.bot, link, item.address,
-                postcode, item.number_bedrooms, item.price,
-                item.floorplan_url)
+                total_area_s, item.number_bedrooms, item.price,
+                item.floorplan_url, item.epc_url
+            )
 
     logger.info("End parsing rightmove")
 

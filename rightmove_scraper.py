@@ -185,6 +185,7 @@ class RightmoveData:
 
         # Optionally get floorplan links from property urls (longer runtime):
         floorplan_urls = list() if get_floorplans else np.nan
+        epc_urls = list() if get_floorplans else np.nan
         full_descriptions = [np.nan for _ in range(len(weblinks))]
         if get_floorplans:
             for i, weblink in enumerate(weblinks):
@@ -198,6 +199,7 @@ class RightmoveData:
                 tree = html.fromstring(content)
 
                 xp_floorplan_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[1]/div[1]/div/a/img/@src"""
+                xp_epc_url = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[4]/a@href"""
                 xp_full_description = """//*[@id="root"]/main/div/div[2]/div/article[3]/div[3]/div/div/text()"""
 
                 full_description_s = tree.xpath(xp_full_description)
@@ -215,14 +217,21 @@ class RightmoveData:
                 else:
                     floorplan_urls.append(np.nan)
 
+                epc_url = tree.xpath(xp_epc_url)
+                if epc_url:
+                    epc_url = epc_url[0]
+                    epc_urls.append(epc_url)
+                else:
+                    epc_urls.append(np.nan)
+
         # Store the data in a Pandas DataFrame:
         data = [price_pcm, titles, addresses, descriptions, weblinks, full_descriptions]
-        data = data + [floorplan_urls] if get_floorplans else data
+        data = data + [floorplan_urls, epc_urls] if get_floorplans else data
 
         temp_df = pd.DataFrame(data)
         temp_df = temp_df.transpose()
         columns = ["price", "type", "address", "description", "url", "full_description"]
-        columns = columns + ["floorplan_url"] if get_floorplans else columns
+        columns = columns + ["floorplan_url", "epc_url"] if get_floorplans else columns
         temp_df.columns = columns
 
         # Drop empty rows which come from placeholders in the html:

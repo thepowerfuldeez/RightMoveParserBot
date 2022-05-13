@@ -1,3 +1,4 @@
 config.py
 seen_links.json
 seen_hashes.json
+google_creds.json
