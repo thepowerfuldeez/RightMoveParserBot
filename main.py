@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 db = DB("seen_links.json", "seen_hashes.json", "seen_description_hashes.json")
 minprices_by_area_num_bedrooms = orjson.loads(Path("minprices_by_area_num_bedrooms.json").read_bytes())
 
+MAX_FLOOR_AREA = 50
+
 
 def send_message(bot, img_url, epc_url, caption):
     bot.send_media_group(chat_id=TG_CHAT_ID, media=[
@@ -60,12 +62,12 @@ def zoopla_job(context: telegram.ext.CallbackContext):
                 continue
 
             total_area = detect_area(item['floorplan_url'])
-            if total_area < 50 and total_area != 0:
+            if total_area < MAX_FLOOR_AREA and total_area != 0:
                 logger.info(f"Skipping {link} cause of small area")
                 continue
             else:
-                if total_area >= 50:
-                    total_area_s = f"{total_area} sq.m"
+                if total_area >= MAX_FLOOR_AREA:
+                    total_area_s = f"{total_area:.1f} sq.m"
                 else:
                     total_area_s = "unknown"
 
@@ -110,12 +112,12 @@ def rightmove_job(context: telegram.ext.CallbackContext):
                 continue
 
             total_area = detect_area(item.floorplan_url)
-            if total_area < 50 and total_area != 0:
+            if total_area < MAX_FLOOR_AREA and total_area != 0:
                 logger.info(f"Skipping {link} cause of small area")
                 continue
             else:
-                if total_area >= 50:
-                    total_area_s = f"{total_area} sq.m"
+                if total_area >= MAX_FLOOR_AREA:
+                    total_area_s = f"{total_area:.1f} sq.m"
                 else:
                     total_area_s = "unknown"
 
